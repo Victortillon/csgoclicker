@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS:GO Case Clicker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      text-align: center;
+      background-color: #1e1e2f;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3em;
+      margin-top: 20px;
+    }
+
+    button, select {
+      padding: 12px 25px;
+      margin: 10px;
+      font-size: 16px;
+      font-family: 'Rajdhani', sans-serif;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    button:hover, select:hover {
+      background-color: #2563eb;
+      transform: scale(1.05);
+    }
+
+    .inventory-item {
+      margin: 5px;
+      padding: 10px;
+      border: 1px solid #aaa;
+      display: inline-block;
+      background-color: #2c2c3a;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(255,255,255,0.1);
+    }
+
+    .common { color: lightgray; }
+    .rare { color: #4aa5ff; }
+    .epic { color: #b44aff; }
+    .legendary { color: #ffd700; }
+
+    .panel {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #2b2b3c;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    #inventory {
+      margin-top: 10px;
+    }
+  </style>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔫</text></svg>"></link>
+</head>
+<!-- <script src="script.js"></script> -->
+<body>
+  <h1>CS:GO Case Clicker</h1>
+  <h2>Money: $<span id="money">0</span></h2>
+
+  <div class="panel">
+    <h2>Money Maker</h2>
+    <button id="money-button" onclick="clickForMoney()">💰 Money (+<span id="click-power">1</span>)</button>
+    <button onclick="buyClickUpgrade()">⬆️ Upgrade Click ($<span id="upgrade-cost">120</span>)</button>
+  </div>
+
+  <div id="roulette-container" style="display: none;">
+    <div id="roulette" style="display: flex; overflow: hidden; width: 300px; height: 150px; border: 2px solid white; margin: 0 auto; position: relative;">
+      <!-- Las skins se generarán dinámicamente aquí -->
+    </div>
+  </div>
+  
+  <div class="panel">
+  <h2>Case Opening</h2>
+  <label for="case-select">Choose a case:</label>
+  <select id="case-select" onchange="updateCaseImage()">
+    <option value="0">Common Case ($50)</option>
+    <option value="1">Rare Case ($100)</option>
+    <option value="2">Legendary Case ($200)</option>
+  </select>
+  <div id="case-image-container">
+    <img id="case-image" src="./images/case1.png" alt="Case Image" style="width: 150px; height: auto; margin-top: 10px;">
+  </div>
+  <button onclick="buyCase()">🎁 Buy Case</button>
+</div>
+
+<script>
+  function updateCaseImage() {
+    const caseSelect = document.getElementById("case-select");
+    const caseImage = document.getElementById("case-image");
+    const caseImages = ["./images/case1.png", "./images/case2.png", "./images/case3.png"];
+    caseImage.src = caseImages[caseSelect.value];
+  }
+</script>
+
+  <h3>Inventory</h3>
+  <p id="inventory-info">Inventory: 0/30</p>
+  <p id="inventory-value">Total Inventory Value: $0</p>
+  <div id="inventory"></div>
+    
+  <div class="panel">
+  <h2>Shop</h2>
+  <p>Upgrade your inventory space!</p>
+  <button onclick="buyInventoryUpgrade()">Upgrade Inventory Space ($200)</button>
+  <br>
+  <button onclick="buyWorker()">Hire Worker ($100)</button>
+  <p>Workers: <span id="worker-count">0</span> (+$0.1/s cada uno)</p>
+  <br>
+  <button onclick="buyInvestor()">Hire Investor ($500)</button>
+  <p>Investors: <span id="investor-count">0</span> (+$2~$15/s cada uno)</p>
+</div>
+
+  <div class="panel">
+    <h2>Upgrade Skin</h2>
+    <p>Selected: <span id="selected-skin">None</span></p>
+    <p>Total selected value: $<span id="selected-total-value">0</span></p>
+    <label for="target-rarity">Choose target rarity:</label>
+    <select id="target-rarity" onchange="updateUpgradeInfo()">
+      <option value="">-- Select --</option>
+    </select>
+    <br>
+    <button onclick="attemptUpgrade()">Try Upgrade</button>
+    <p id="upgrade-info"></p>
+  </div>
+
+  <div class="panel">
+  <h2>Jackpot</h2>
+  <label for="jackpot-level">Choose Jackpot Level:</label>
+  <select id="jackpot-level">
+    <option value="low">Low</option>
+    <option value="medium">Medium</option>
+    <option value="high">High</option>
+  </select>
+  <h3>Your Skins</h3>
+  <div id="jackpot-your-skins"></div>
+  <p>Total Value: $<span id="your-total-value">0</span></p>
+  <p>Your Win Chance: <span id="player-chance">0</span>%</p>
+  <button onclick="addSkinToJackpot()">Add Selected Skin to Jackpot</button>
+  
+  <h3>Jackpot Pool</h3>
+  <div id="jackpot-pool"></div>
+  <p>Bot Total Value: $<span id="bot-total-value">0</span></p>
+  
+  <button onclick="startJackpot()">Start Jackpot</button>
+  <p id="jackpot-info"></p>
+</div>
+
+<div class="panel">
+  <h2>Map Selector</h2>
+  <label for="map-select">Choose a map:</label>
+  <select id="map-select" onchange="changeBackground()">
+    <option value="background.jpg">Map 1</option>
+    <option value="background2.jpg">Map 2</option>
+  </select>
+</div>
+
+  <script>
+    let jackpotSkins = []; // Skins que el jugador mete al jackpot
+    let botSkins = []; // Skins que los bots meten al jackpot
+    let selectedSkinIndices = [];
+    let money = 0;
+    let clickPower = 1;
+    let upgradeCost = 140;
+    const inventory = [];
+    let selectedSkinIndex = null;
+    const inventoryDiv = document.getElementById("inventory");
+    const raritySelect = document.getElementById("target-rarity");
+
+
+    const items = [
+      // Común
+      { name: "Glock-18 | Candy Apple", value: 7, chance: 0.045, rarity: "common", image: "./images/candyapple.png" },
+      { name: "USP-S | Forest Leaves", value: 2, chance: 0.08, rarity: "common", image: "./images/forestleaves.png" },
+      { name: "MP7 | Army Recon", value: 8, chance: 0.03, rarity: "common", image: "./images/armyrecon.png" },
+      { name: "P2000 | Grassland", value: 1, chance: 0.08, rarity: "common", image: "./images/grassland.png" },
+      { name: "Galil AR | Hunting Blind", value: 3, chance: 0.04, rarity: "common", image: "./images/huntingblind.png" },
+      { name: "SCAR-20 | Contractor", value: 6, chance: 0.04, rarity: "common", image: "./images/contractor.png" },
+      { name: "Nova | Polar Mesh", value: 1.5, chance: 0.055, rarity: "common", image: "./images/polarmesh.png" },
+      { name: "XM1014 | Urban Perforated", value: 3, chance: 0.05, rarity: "common", image: "./images/urbanperforated.png" },
+      { name: "MAG-7 | Sand Dune", value: 4, chance: 0.058, rarity: "common", image: "./images/sanddune.png" },
+      { name: "G3SG1 | Desert Storm", value: 5.5, chance: 0.059, rarity: "common", image: "./images/desertstorm.png" },
+
+      // Rara
+      { name: "AK-47 | Elite Build", value: 25, chance: 0.015, rarity: "rare", image: "./images/elitebuild.png" },
+      { name: "M4A1-S | Boreal Forest", value: 13, chance: 0.015, rarity: "rare", image: "./images/borealforest.png" },
+      { name: "P90 | Grim", value: 12, chance: 0.015, rarity: "rare", image: "./images/grim.png" },
+      { name: "UMP-45 | Riot", value: 11, chance: 0.015, rarity: "rare", image: "./images/riot.png" },
+      { name: "FAMAS | Mecha Industries", value: 15, chance: 0.015, rarity: "rare", image: "./images/mechaindustries.png" },
+      { name: "Negev | Man-o'-war", value: 17, chance: 0.015, rarity: "rare", image: "./images/manowar.png" },
+      { name: "Five-SeveN | Retrobution", value: 18, chance: 0.01, rarity: "rare", image: "./images/retrobution.png" },
+      { name: "MAC-10 | Rangeen", value: 16.5, chance: 0.015, rarity: "rare", image: "./images/rangreen.png" },
+      { name: "CZ75-Auto | Tigris", value: 12.6, chance: 0.015, rarity: "rare", image: "./images/tigris.png" },
+      { name: "SG 553 | Tiger Moth", value: 16, chance: 0.015, rarity: "rare", image: "./images/tigermoth.png" },
+
+      // Épica
+      { name: "AWP | Asiimov", value: 35, chance: 0.006, rarity: "epic", image: "./images/asiimov.png" },
+      { name: "Desert Eagle | Blaze", value: 140, chance: 0.005, rarity: "epic", image: "./images/blaze.png" },
+      { name: "M4A4 | Desolate Space", value:20, chance: 0.008, rarity: "epic", image: "./images/desolatespace.png" },
+      { name: "P250 | Muertos", value: 32, chance: 0.008, rarity: "epic", image: "./images/muertos.png" },
+      { name: "FAMAS | Roll Cage", value: 34, chance: 0.008, rarity: "epic", image: "./images/rollcage.png" },
+      { name: "AK-47 | Redline", value: 19, chance: 0.008, rarity: "epic", image: "./images/redline.png" },
+      { name: "SG 553 | Cyrex", value: 45, chance: 0.008, rarity: "epic", image: "./images/cyrex.png" },
+      { name: "UMP-45 | Primal Saber", value: 56, chance: 0.008, rarity: "epic", image: "./images/primalsaber.png" },
+      { name: "M4A1-S | Cyrex", value: 20, chance: 0.008, rarity: "epic", image: "./images/cyrexm4.png" },
+      { name: "SSG 08 | Dragonfire", value: 10, chance: 0.008, rarity: "epic", image: "./images/dragonfire.png" },
+
+      // Legendaria
+      { name: "★ Karambit | Doppler", value: 1550, chance: 0.0008, rarity: "legendary", image: "./images/ruby.png" },
+      { name: "★ M9 Bayonet | Marble Fade", value: 460, chance: 0.001, rarity: "legendary", image: "./images/marblefade.png" },
+      { name: "★ Butterfly Knife | Slaughter", value: 1160, chance: 0.0007, rarity: "legendary", image: "./images/slaughterbutter.png" },
+      { name: "★ Gut Knife | Lore", value: 115, chance: 0.002, rarity: "legendary", image: "./images/gutlore.png" },
+      { name: "★ Huntsman Knife | Fade", value: 280, chance: 0.00105, rarity: "legendary", image: "./images/huntsmanfade.png" },
+      { name: "★ Talon Knife | Damascus Steel", value: 320, chance: 0.0011, rarity: "legendary", image: "./images/talondamascus.png" },
+      { name: "★ Shadow Daggers | Crimson Web", value: 90, chance: 0.0012, rarity: "legendary", image: "./images/shadowcrimsom.png" },
+      { name: "★ Nomad Knife | Case Hardened", value: 105, chance: 0.0013, rarity: "legendary", image: "./images/nomadcase.png" },
+      { name: "★ Sport Gloves | Vice", value: 2800, chance: 0.00065, rarity: "legendary", image: "./images/sportvice.png" },
+      { name: "★ Specialist Gloves | Fade", value: 650, chance: 0.001, rarity: "legendary", image: "./images/specialistfade.png" },
+
+      //mitica
+      { name: "AWP | Dragon Lore", value: 10550, chance: 0.0004, rarity: "legendary", image: "./images/dragonlore.png" },
+      { name: "M4A4 | Howl", value: 5000, chance: 0.0006, rarity: "legendary", image: "./images/howl.png" },
+      { name: "AK-47 | Blue Gem", value: 3260, chance: 0.0007, rarity: "legendary", image: "./images/bluegem.png" }
+      
+      
+    ];
+
+    const cases = [
+  {
+    name: "Common Case",
+    price: 50,
+    rarities: ["common", "rare", "epic", "legendary"] 
+  },
+  {
+    name: "Rare Case",
+    price: 150,
+    rarities: ["rare", "epic", "legendary"]
+  },
+  {
+    name: "Legendary Case",
+    price: 400,
+    rarities: ["epic", "legendary", "mythic"]
+  }
+];
+    function clickForMoney() {
+      money += clickPower;
+      updateMoney();
+    }
+
+
+    function updateClickStats() {
+      document.getElementById("click-power").textContent = clickPower;
+      document.getElementById("upgrade-cost").textContent = upgradeCost;
+    }
+
+    function buyInventoryUpgrade() {
+  const upgradeCost = 200; // Costo de la mejora
+  if (money < upgradeCost) {
+    alert("Not enough money to upgrade your inventory space!");
+    return;
+  }
+
+  money -= upgradeCost;
+  inventoryLimit += 10; // Incrementar el límite del inventario
+  updateMoney();
+  alert(`Inventory space upgraded! New limit: ${inventoryLimit}`);
+  displayInventory();
+}
+
+    function buyClickUpgrade() {
+      if (money >= upgradeCost) {
+        money -= upgradeCost;
+        clickPower++;
+        upgradeCost = Math.floor(upgradeCost * 1.8);
+        updateMoney();
+        updateClickStats();
+      } else {
+        alert("Not enough money to upgrade!");
+      }
+    }
+
+    function buyCase() {
+  const caseIndex = document.getElementById("case-select").value; // Obtener el índice de la caja seleccionada
+  const selectedCase = cases[caseIndex]; // Obtener la caja seleccionada del array `cases`
+
+  if (!selectedCase) {
+    alert("Please select a valid case.");
+    return;
+  }
+
+  if (money < selectedCase.price) {
+    alert("Not enough money!");
+    return;
+  }
+
+  money -= selectedCase.price;
+  updateMoney();
+
+  // Filtrar las skins según las rarezas de la caja
+  const availableItems = items.filter(item => selectedCase.rarities.includes(item.rarity));
+
+  // Abrir la caja con las skins filtradas
+  const reward = openCase(availableItems);
+  addSkinToInventory(reward); // Usar la nueva función para agregar la skin
+
+  // Mostrar animación
+  showCaseOpeningAnimation(reward);
+}
+
+ 
+
+
+function openCase(availableItems) {
+  // Sumar todos los chance de las skins disponibles
+  const totalChance = availableItems.reduce((sum, item) => sum + item.chance, 0);
+  let rand = Math.random() * totalChance;
+  let cumulative = 0;
+
+  for (let item of availableItems) {
+    cumulative += item.chance;
+    if (rand < cumulative) {
+      return { ...item }; // Retornar una copia del objeto
+    }
+  }
+
+  // Fallback en caso de error
+  return { ...availableItems[availableItems.length - 1] };
+}
+
+function showCaseOpeningAnimation(reward) {
+  const animationDiv = document.createElement("div");
+  animationDiv.id = "case-opening-animation";
+  animationDiv.style.position = "fixed";
+  animationDiv.style.top = "50%";
+  animationDiv.style.left = "50%";
+  animationDiv.style.transform = "translate(-50%, -50%)";
+  animationDiv.style.backgroundColor = "#2c2c3a";
+  animationDiv.style.padding = "20px";
+  animationDiv.style.borderRadius = "10px";
+  animationDiv.style.textAlign = "center";
+  animationDiv.style.zIndex = "1000";
+
+  animationDiv.innerHTML = `
+    <h2>Opening Case...</h2>
+    <img src="${reward.image}" alt="${reward.name}" style="width: 150px; height: auto; margin: 10px;">
+    <p>${reward.name} ($${reward.value})</p>
+  `;
+
+  document.body.appendChild(animationDiv);
+
+  setTimeout(() => {
+    document.body.removeChild(animationDiv);
+  }, 3000); // La animación dura 3 segundos
+}
+
+let inventoryLimit = 30; // Límite inicial del inventario
+
+    function displayInventory() {
+  inventoryDiv.innerHTML = ""; // Limpiar el contenido actual del inventario
+
+  inventory.forEach((item, index) => {
+  const div = document.createElement("div");
+  div.className = `inventory-item ${item.rarity}`;
+  if (selectedSkinIndices.includes(index)) {
+    div.style.border = "2px solid #ffd700";
+    div.style.backgroundColor = "#444455";
+  }
+  div.onclick = () => toggleSelectSkin(index);
+  div.innerHTML = `
+    <img src="${item.image}" alt="${item.name}" style="width: 100px; height: auto; margin: 10px auto;">
+    <p>${item.name} ($${item.value})</p>
+    <button onclick="sellItem(${index});event.stopPropagation();">Sell</button>
+  `;
+  inventoryDiv.appendChild(div);
+});
+}
+
+function toggleSelectSkin(index) {
+  const skinIndex = selectedSkinIndices.indexOf(index);
+  if (skinIndex > -1) {
+    selectedSkinIndices.splice(skinIndex, 1); // Desmarcar
+  } else {
+    selectedSkinIndices.push(index); // Marcar
+  }
+  updateUpgradeOptions();
+  updateUpgradeInfo();
+  displayInventory();
+}
+
+function updateInventoryLimit() {
+  // Actualizar el límite del inventario  
+  // Mostrar el límite del inventario
+  const inventoryInfo = document.getElementById("inventory-info");
+  inventoryInfo.textContent = `Inventory: ${inventory.length}/${inventoryLimit}`;
+}
+
+  
+
+function addSkinToInventory(skin) {
+  if (inventory.length >= inventoryLimit) {
+    alert("Your inventory is full! Sell some skins or upgrade your inventory space.");
+    return;
+  }
+  inventory.push(skin); // Agregar la skin al inventario
+  displayInventory(); // Actualizar la interfaz del inventario
+}
+    function sellItem(index) {
+      money += inventory[index].value;
+      inventory.splice(index, 1);
+      selectedSkinIndex = null;
+      updateMoney();
+      displayInventory();
+    }
+
+    
+
+    function updateUpgradeOptions() {
+  const raritySelect = document.getElementById("target-rarity");
+  raritySelect.innerHTML = '<option value="">-- Select --</option>';
+
+  if (selectedSkinIndices.length === 0) {
+    document.getElementById("selected-skin").textContent = "None";
+    document.getElementById("selected-total-value").textContent = "0";
+    return;
+  }
+
+  // Mostrar nombres seleccionados
+  document.getElementById("selected-skin").textContent =
+    selectedSkinIndices.map(i => `${inventory[i].name} ($${inventory[i].value})`).join(", ");
+
+  // Mostrar el valor total seleccionado
+  const totalValue = selectedSkinIndices.reduce((sum, i) => sum + inventory[i].value, 0);
+  document.getElementById("selected-total-value").textContent = totalValue.toFixed(2);
+
+  // Solo mostrar upgrades posibles para la skin de mayor valor seleccionada
+  const maxValue = Math.max(...selectedSkinIndices.map(i => inventory[i].value));
+  const upgradeOptions = items.filter(item => item.value > maxValue);
+
+  upgradeOptions.forEach(item => {
+    const option = document.createElement("option");
+    option.value = item.name;
+    option.textContent = `${item.name} ($${item.value})`;
+    raritySelect.appendChild(option);
+  });
+}
+
+    function updateUpgradeInfo() {
+  const info = document.getElementById("upgrade-info");
+  const targetName = raritySelect.value;
+  if (selectedSkinIndices.length === 0 || !targetName) {
+    info.textContent = "Select at least one skin and a target rarity.";
+    return;
+  }
+  const totalValue = selectedSkinIndices.reduce((sum, i) => sum + inventory[i].value, 0);
+  const target = items.find(i => i.name === targetName);
+  if (!target || target.value <= totalValue) {
+    info.textContent = "Target must be of higher value than the sum of selected skins.";
+    return;
+  }
+  const chance = Math.min(100, Math.floor((totalValue / target.value) * 100));
+  info.textContent = `Upgrade to: ${target.name} ($${target.value}) | Success chance: ${chance}%`;
+}
+
+    function attemptUpgrade() {
+  const targetName = raritySelect.value;
+  if (selectedSkinIndices.length === 0 || !targetName) {
+    alert("Select at least one skin and a target rarity.");
+    return;
+  }
+  const target = items.find(i => i.name === targetName);
+  if (!target) {
+    alert("Invalid target skin.");
+    return;
+  }
+  const totalValue = selectedSkinIndices.reduce((sum, i) => sum + inventory[i].value, 0);
+  const chance = Math.min(100, Math.floor((totalValue / target.value) * 100));
+  let success = Math.random() * 100 < chance;
+  if (success) {
+    alert(`Upgrade Success! You got: ${target.name}`);
+    // Reemplazar la primera seleccionada por la nueva skin, eliminar el resto
+    inventory[selectedSkinIndices[0]] = { ...target };
+    for (let i = selectedSkinIndices.length - 1; i > 0; i--) {
+      inventory.splice(selectedSkinIndices[i], 1);
+    }
+  } else {
+    alert("Upgrade Failed! You lost all selected items.");
+    selectedSkinIndices.sort((a, b) => b - a);
+    for (let idx of selectedSkinIndices) {
+      inventory.splice(idx, 1);
+    }
+  }
+  selectedSkinIndices = [];
+  raritySelect.value = "";
+  displayInventory();
+  updateUpgradeOptions();
+  updateUpgradeInfo();
+}
+
+    function addSkinToJackpot() {
+  if (selectedSkinIndices.length === 0) {
+    alert("Select at least one skin to add to the jackpot.");
+    return;
+  }
+  if (jackpotSkins.length + selectedSkinIndices.length > 8) {
+    alert("You can only add up to 8 skins to the jackpot.");
+    return;
+  }
+  // Añadir todas las seleccionadas
+  selectedSkinIndices.sort((a, b) => b - a); // Eliminar de mayor a menor índice
+  for (let idx of selectedSkinIndices) {
+    jackpotSkins.push(inventory[idx]);
+    inventory.splice(idx, 1);
+  }
+  selectedSkinIndices = [];
+  updateJackpotUI();
+  displayInventory();
+}
+
+function updateJackpotUI() {
+  const yourSkinsDiv = document.getElementById("jackpot-your-skins");
+  const poolDiv = document.getElementById("jackpot-pool");
+  const yourTotalValueSpan = document.getElementById("your-total-value");
+  const botTotalValueSpan = document.getElementById("bot-total-value");
+  const playerChanceSpan = document.getElementById("player-chance");
+
+  yourSkinsDiv.innerHTML = "";
+  poolDiv.innerHTML = "";
+
+  // Mostrar las skins ingresadas por el jugador
+  let yourTotalValue = 0;
+    jackpotSkins.forEach((skin, i) => {
+  const div = document.createElement("div");
+  div.className = `inventory-item ${skin.rarity}`;
+  div.style.position = "relative";
+  div.innerHTML = `
+    <button onclick="removeSkinFromJackpot(${i})" style="position:absolute;top:2px;right:2px;font-size:10px;padding:2px 6px;border-radius:6px;background:#ff4a4a;color:white;border:none;cursor:pointer;">Remove</button>
+    <img src="${skin.image}" alt="${skin.name}" style="width: 100px; height: auto;">
+    <p>${skin.name} ($${skin.value})</p>
+  `;
+  yourSkinsDiv.appendChild(div);
+  yourTotalValue += skin.value;
+});
+
+  // Mostrar las skins ingresadas por los bots
+  let botTotalValue = 0;
+  botSkins.forEach((skin) => {
+    const div = document.createElement("div");
+    div.className = `inventory-item ${skin.rarity}`;
+    div.innerHTML = `
+      <img src="${skin.image}" alt="${skin.name}" style="width: 100px; height: auto;">
+      <p>${skin.name} ($${skin.value})</p>
+    `;
+    poolDiv.appendChild(div);
+    botTotalValue += skin.value;
+  });
+
+  // Calcular las probabilidades de ganar
+  const totalValue = yourTotalValue + botTotalValue;
+  const playerChance = totalValue > 0 ? (yourTotalValue / totalValue) * 100 : 0;
+
+  // Actualizar los valores totales y las probabilidades
+  yourTotalValueSpan.textContent = yourTotalValue.toFixed(2);
+  botTotalValueSpan.textContent = botTotalValue.toFixed(2);
+  playerChanceSpan.textContent = playerChance.toFixed(2);
+}
+
+function startJackpot() {
+  if (jackpotSkins.length === 0) {
+    alert("You need to add at least one skin to the jackpot.");
+    return;
+  }
+
+  // Obtener el nivel del jackpot seleccionado
+  const jackpotLevel = document.getElementById("jackpot-level").value;
+
+  // Definir los rangos de valor según el nivel
+  let minValue, maxValue;
+  if (jackpotLevel === "low") {
+    minValue = 1;
+    maxValue = 50;
+  } else if (jackpotLevel === "medium") {
+    minValue = 40;
+    maxValue = 250;
+  } else if (jackpotLevel === "high") {
+    minValue = 280;
+    maxValue = 2900;
+  }
+
+  // Generar skins de los bots dentro del rango de valores
+  botSkins = [];
+  const botCount = Math.floor(Math.random() * 3) + 2; // Entre 2 y 4 bots
+  for (let i = 0; i < botCount; i++) {
+    const validSkins = items.filter(item => item.value >= minValue && item.value <= maxValue);
+    if (validSkins.length > 0) {
+      const randomSkin = validSkins[Math.floor(Math.random() * validSkins.length)];
+      botSkins.push({ ...randomSkin });
+    }
+  }
+
+  updateJackpotUI();
+
+  // Calcular probabilidades
+  const totalValue = [...jackpotSkins, ...botSkins].reduce((sum, skin) => sum + skin.value, 0);
+  const playerValue = jackpotSkins.reduce((sum, skin) => sum + skin.value, 0);
+  const playerChance = (playerValue / totalValue) * 100;
+
+  // Determinar ganador
+  const winner = Math.random() * 100 < playerChance ? "player" : "bot";
+
+  setTimeout(() => {
+    if (winner === "player") {
+      alert(`You won the jackpot! You get all the skins.`);
+      inventory.push(...jackpotSkins, ...botSkins); // Agregar todas las skins al inventario
+    } else {
+      alert(`You lost the jackpot. Better luck next time!`);
+    }
+
+    // Reiniciar el jackpot
+    jackpotSkins = [];
+    botSkins = [];
+    updateJackpotUI();
+    displayInventory();
+  }, 3000); // Simular un pequeño retraso para el resultado
+}
+
+function removeSkinFromJackpot(index) {
+  jackpotSkins.splice(index, 1);
+  updateJackpotUI();
+  displayInventory();
+}
+
+
+let workers = 0;
+let workerCost = 100;
+
+function updateWorkerCount() {
+  document.getElementById("worker-count").textContent = workers;
+}
+
+function buyWorker() {
+  if (money >= workerCost) {
+    money -= workerCost;
+    workers += 1;
+    updateMoney();
+    updateWorkerCount();
+  } else {
+    alert("Not enough money to hire a worker!");
+  }
+}
+
+// Dinero pasivo por trabajadores
+setInterval(() => {
+  if (workers > 0) {
+    money += workers * 0.1;
+    updateMoney();
+  }
+}, 1000);
+
+function updateMoney() {
+  document.getElementById("money").textContent = money.toFixed(2);
+}
+
+  function changeBackground() {
+    const mapSelect = document.getElementById("map-select");    
+    const selectedMap = mapSelect.value;
+    document.body.style.backgroundImage = `url('./images/${selectedMap}')`;
+    document.body.style.backgroundSize = "cover";
+    document.body.style.backgroundPosition = "center";
+    document.body.style.backgroundRepeat = "no-repeat";
+  }
+  // Inicializar el fondo al cargar la página
+  changeBackground();
+  // Inicializar el mapa por defecto
+  document.body.style.backgroundImage = "url('./images/background.jpg')";
+  
+  let investors = 0;
+let investorCost = 500;
+
+function updateInvestorCount() {
+  document.getElementById("investor-count").textContent = investors;
+}
+
+function buyInvestor() {
+  if (money >= investorCost) {
+    money -= investorCost;
+    investors += 1;
+    updateMoney();
+    updateInvestorCount();
+  } else {
+    alert("Not enough money to hire an investor!");
+  }
+}
+
+// Dinero pasivo por inversores
+setInterval(() => {
+  if (investors > 0) {
+    // Cada inversor da entre 2 y 15 por segundo
+    let investorIncome = 0;
+    for (let i = 0; i < investors; i++) {
+      investorIncome += Math.random() * (15 - 2) + 2;
+    }
+    money += investorIncome;
+    updateMoney();
+  }
+}, 1000);
+
+  updateClickStats();
+  updateUpgradeOptions();
+  window.clickForMoney = clickForMoney;
+  window.buyClickUpgrade = buyClickUpgrade;
+  window.buyInventoryUpgrade = buyInventoryUpgrade;
+  window.buyWorker = buyWorker;
+  window.buyInvestor = buyInvestor;
+  window.addSkinToJackpot = addSkinToJackpot;
+  window.attemptUpgrade = attemptUpgrade;
+  window.updateCaseImage = updateCaseImage;
+  window.changeBackground = changeBackground;
+  window.startJackpot = startJackpot;
+  window.sellItem = sellItem;
+  window.removeSkinFromJackpot = removeSkinFromJackpot;
+
+  </script>
+</body>
+</html>
+
